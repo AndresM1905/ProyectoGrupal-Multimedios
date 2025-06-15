@@ -38,20 +38,20 @@ cd ..                 # vuelve a raíz del proyecto
 ```
 
 ### 4. Obtener claves y variables de entorno
-1. Crea un archivo `.env` en la raíz *y* otro en `backend/` a partir de los ejemplos:
+1. Crear un archivo `.env` en la raíz *y* otro en `backend/` a partir de los ejemplos:
    ```bash
    cp .env.example .env
-   cp backend/.env.example backend/.env   # si existe
+   cp backend/.env.example backend/.env   # si está el
    ```
-2. Rellena:
+2. Rellenar variables de entorno:
    * `VITE_TVDB_API_KEY` – clave v4 personal de TheTVDB.
    La que me dieron a mí fue: ba615dd2-a5f6-4b44-97f7-245bc3e46667
-   * `JWT_SECRET` – cualquier string aleatorio.
+   * `JWT_SECRET` – cualquier string random.
 
 ### 5. Instalar Turso CLI y crear la base de datos
 ```bash
 # Para la mac con Homebrew
-brew install turso      # (primera vez)   instala también sqld
+brew install turso      # instala también sqld
 
 # En Linux / Windows (otros métodos)
 curl -sSf https://get.tur.so/install.sh | sh   # o revisar en internet
@@ -84,7 +84,7 @@ npm run dev      # Vite; URL mostrada en consola, p.e. http://localhost:5173
 ```
 
  Abrir el navegador, registrarse o iniciar sesión.
-La app cargará automáticamente tus listas guardadas en Turso y las mantendrá sincronizadas mientras añades o eliminas títulos.
+La app cargará automáticamente las listas guardadas en Turso y las mantendrá sincronizadas mientras se añaden o eliminan los títulos.
 
 
 Abrir `http://localhost:5173` y empiezar a probar.
@@ -131,7 +131,6 @@ series-tracker-vue/
 - [x] Backend Express + JWT + Turso
 - [x] Autenticación y sincronización multi-usuario
 - [x] Filtro Series / Películas
-- [ ] Sección “Populares” usando filtros de TVDB o métricas propias.
 - [ ] Tests unitarios (Vitest) y e2e (Cypress).
 
 ## Backend (API)
@@ -140,7 +139,7 @@ series-tracker-vue/
 ```bash
 cd series-tracker-vue/backend
 npm install
-# copia y rellena .env con TURSO_URL, TURSO_AUTH_TOKEN, JWT_SECRET, PORT
+# copiar y rellena .env con TURSO_URL, TURSO_AUTH_TOKEN, JWT_SECRET, PORT
 npm run dev
 ```
 
