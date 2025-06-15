@@ -46,6 +46,7 @@ export const useAuthStore = defineStore('auth', {
       }
     },
     logout () {
+      import('./lists').then(m => m.useListsStore().clearAll())
       delete api.defaults.headers.common.Authorization
       this.token = null
       localStorage.removeItem('token')
@@ -54,6 +55,18 @@ export const useAuthStore = defineStore('auth', {
       api.defaults.headers.common.Authorization = `Bearer ${t}`
       this.token = t
       localStorage.setItem('token', t)
+    },
+    // Verifica si el token almacenado sigue siendo válido
+    async validate () {
+      if (!this.token) return false
+      try {
+        await api.get('/lists') // endpoint protegido
+        return true
+      } catch (err) {
+        // Cualquier fallo invalida la sesión para evitar estado inconsistente
+        this.logout()
+        return false
+      }
     }
   }
 })

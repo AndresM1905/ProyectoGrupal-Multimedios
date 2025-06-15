@@ -3,10 +3,11 @@
 Aplicación **full-stack** para llevar el control de tus series y películas, construida con **Vue 3** (Vite) en el front-end y **Express + Turso** en el back-end.
 
 Permite:
-- Búsqueda de series y películas en TheTVDB.
+- Búsqueda de series y películas en TheTVDB (barra superior con resultados en vivo).
 - Gestión de listas *Watchlist*, *Vistos* y *Favoritos* por usuario.
 - Autenticación email/contraseña con JWT.
-- Sincronización de listas en la nube vía Turso (con fallback offline a `localStorage`).
+- Sincronización de listas en la nube vía Turso (fallback offline a `localStorage`).
+- Filtro de tipo *(Series | Películas | Todas)* presente en Home y cada vista de listas.
 
 ---
 
@@ -82,7 +83,8 @@ cd ..            # raíz del proyecto
 npm run dev      # Vite; URL mostrada en consola, p.e. http://localhost:5173
 ```
 
- Abrir el navegador, registrarse y empieza a añadir series y películas.
+ Abrir el navegador, registrarse o iniciar sesión.
+La app cargará automáticamente tus listas guardadas en Turso y las mantendrá sincronizadas mientras añades o eliminas títulos.
 
 
 Abrir `http://localhost:5173` y empiezar a probar.

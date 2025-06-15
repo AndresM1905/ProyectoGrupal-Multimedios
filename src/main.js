@@ -7,16 +7,27 @@ import App from './App.vue'
 import { useAuthStore } from './stores/auth'
 import { useListsStore } from './stores/lists'
 
-const app = createApp(App)
-const pinia = createPinia()
-app.use(pinia)
-app.use(router)
+async function bootstrap () {
+  const app = createApp(App)
+  const pinia = createPinia()
+  app.use(pinia)
+  app.use(router)
 
-// Cargar listas remotas si ya hay sesión almacenada
-const auth = useAuthStore()
-const lists = useListsStore()
-if (auth.token) {
-  lists.loadFromApi()
+  const auth = useAuthStore()
+  const lists = useListsStore()
+
+  const { useSearchStore } = await import('./stores/search')
+  const search = useSearchStore()
+  search.close()
+
+  if (await auth.validate()) {
+    lists.loadFromApi()
+  } else if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+    await router.replace('/login')
+  }
+
+  await router.isReady()
+  app.mount('#app')
 }
 
-app.mount('#app')
+bootstrap()
