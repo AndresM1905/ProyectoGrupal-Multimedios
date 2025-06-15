@@ -6,7 +6,12 @@ export const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || 'http
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
-    token: localStorage.getItem('token') || null,
+    // Si hay token en localStorage, configura encabezado de inmediato
+    token: (() => {
+      const t = localStorage.getItem('token') || null
+      if (t) api.defaults.headers.common.Authorization = `Bearer ${t}`
+      return t
+    })(),
     user: null,
     loading: false,
     error: ''
