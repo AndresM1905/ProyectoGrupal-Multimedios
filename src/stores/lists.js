@@ -33,7 +33,7 @@ export const useListsStore = defineStore('lists', {
     // Añade o quita una serie en la lista indicada
     toggle (listName, show) {
       const list = this[listName]
-      const idx = list.findIndex(s => s.id === show.id)
+      const idx = list.findIndex(s => s.id === show.id && (s.type || 'serie') === (show.type || 'serie'))
       if (idx === -1) {
         list.push(show)
       } else {
@@ -41,8 +41,13 @@ export const useListsStore = defineStore('lists', {
       }
       saveToStorage(this)
     },
-    isIn (listName, id) {
-      return this[listName].some(s => s.id === id)
+    isIn (listName, id, type = null) {
+      return this[listName].some(s => s.id === id && (type ? (s.type || 'serie') === type : true))
+    },
+    // Devuelve la lista filtrada por tipo ('serie', 'pelicula' o 'all')
+    getFiltered (listName, type = 'all') {
+      if (type === 'all') return this[listName]
+      return this[listName].filter(s => (s.type || 'serie') === type)
     },
     clearAll () {
       this.watchlist = []

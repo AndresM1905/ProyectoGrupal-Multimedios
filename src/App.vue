@@ -11,7 +11,7 @@
       <router-link to="/watchlist" class="hdr-icon" title="Watchlist"><i class="fa-solid fa-bookmark"></i></router-link>
       <router-link to="/watched" class="hdr-icon" title="Vistos"><i class="fa-solid fa-eye"></i></router-link>
       <router-link to="/favorites" class="hdr-icon" title="Favoritos"><i class="fa-solid fa-heart"></i></router-link>
-    </div>
+          </div>
   </header>
 
   <!-- Contenido principal -->
@@ -25,7 +25,7 @@
     <router-link to="/watchlist" class="nav-link"><i class="fa-solid fa-bookmark"></i><span>Watchlist</span></router-link>
     <router-link to="/watched" class="nav-link"><i class="fa-solid fa-eye"></i><span>Vistos</span></router-link>
     <router-link to="/favorites" class="nav-link"><i class="fa-solid fa-heart"></i><span>Favoritos</span></router-link>
-  </nav>
+      </nav>
 </template>
 
 <style scoped>

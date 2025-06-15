@@ -62,7 +62,29 @@ export async function searchSeries (query) {
       id: item.tvdb_id || item.id,
       title: item.name || item.slug || 'Serie',
       img: item.image_url || item.imageUrl || item.image || 'https://via.placeholder.com/342x513?text=No+Image',
-      year
+      year,
+      type: 'serie'
+    }
+  })
+}
+
+// Búsqueda de películas
+export async function searchMovies (query) {
+  const token = await getToken()
+  const url = `${API_BASE}/search?query=${encodeURIComponent(query)}&type=movie`
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` }
+  })
+  if (!res.ok) throw new Error('Search request failed')
+  const { data = [] } = await res.json()
+  return data.map(item => {
+    const year = item.year ? String(item.year) : (item.released ? item.released.slice(0, 4) : '')
+    return {
+      id: item.tvdb_id || item.id,
+      title: item.name || item.slug || 'Película',
+      img: item.image_url || item.imageUrl || item.image || 'https://via.placeholder.com/342x513?text=No+Image',
+      year,
+      type: 'pelicula'
     }
   })
 }

@@ -1,14 +1,21 @@
 <script setup>
 import ThumbGrid from '../components/ThumbGrid.vue'
+import TypeFilter from '../components/TypeFilter.vue'
 import { useListsStore } from '../stores/lists'
+import { ref, computed } from 'vue'
+import { useRoute } from 'vue-router'
 
 const lists = useListsStore()
+const route = useRoute()
+const type = ref(route.query.type || 'all')
+const items = computed(() => [...lists.getFiltered('watchlist', type.value)].slice().reverse())
 </script>
 
 <template>
   <section class="section">
-    <h3 class="section-title"><i class="fa-solid fa-layer-group"></i> Mi Watchlist</h3>
-    <ThumbGrid v-if="lists.watchlist.length" :shows="lists.watchlist" />
-    <p v-else>No tienes series en tu Watchlist.</p>
+        <h3 class="section-title"><i class="fa-solid fa-layer-group"></i> Mi Watchlist</h3>
+    <TypeFilter v-model="type" />
+    <ThumbGrid v-if="items.length" :shows="items" />
+    <p v-else>No tienes contenido en tu Watchlist.</p>
   </section>
 </template>
