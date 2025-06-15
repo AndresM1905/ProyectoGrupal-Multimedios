@@ -40,18 +40,19 @@ async function handleSubmit (e) {
 
 <template>
   <div class="overlay">
-    <button class="close-btn" @click="$router.back()"><i class="fa-solid fa-xmark"></i></button>
-    <section class="section">
-    <h3 class="section-title"><i class="fa-solid fa-search"></i> Buscar</h3>
-    <TypeFilter v-model="type" />
-    <form @submit="handleSubmit" class="search" style="margin-bottom:1rem;">
-      <input v-model="query" type="search" placeholder="Buscar serie…" />
-      <button type="submit"><i class="fa-solid fa-search"></i></button>
-    </form>
+    <div class="search-top">
+      <form @submit="handleSubmit" class="search-bar">
+        <i class="fa-solid fa-search"></i>
+        <input v-model="query" type="search" placeholder="Buscar…" />
+      </form>
+      <button class="close-btn" @click="$router.back()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <TypeFilter v-model="type" class="type-filter" />
+
     <div v-if="loading" class="loading">Buscando…</div>
     <div v-else-if="error" class="error">{{ error }}</div>
     <ThumbGrid v-else :shows="results" />
-  </section>
   </div>
 </template>
 
@@ -62,15 +63,39 @@ async function handleSubmit (e) {
   background: var(--clr-bg);
   overflow-y: auto;
   z-index: 1200;
-  padding-top: 4rem; /* leave space for header */
+  padding: 4rem 1rem 2rem; /* leave space for main header */
+}
+.search-top {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.search-bar {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.75rem;
+  background: var(--clr-elev-1, #1f1f1f);
+  border-radius: 999px;
+  color: var(--clr-muted);
+  font-size: 0.9rem;
+}
+.search-bar input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--clr-text);
+  outline: none;
 }
 .close-btn {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
   background: none;
   border: none;
   color: var(--clr-muted);
   font-size: 1.5rem;
+}
+.type-filter {
+  margin-bottom: 1rem;
 }
 </style>
