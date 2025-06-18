@@ -45,7 +45,7 @@ cd ..                 # vuelve a raíz del proyecto
    ```
 2. Rellenar variables de entorno:
    * `VITE_TVDB_API_KEY` – clave v4 personal de TheTVDB.
-   La que me dieron a mí fue: ba615dd2-a5f6-4b44-97f7-245bc3e46667
+  
    * `JWT_SECRET` – cualquier string random.
 
 ### 5. Instalar Turso CLI y crear la base de datos
