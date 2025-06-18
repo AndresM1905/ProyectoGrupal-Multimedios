@@ -1,5 +1,6 @@
 <script setup>
 import { useListsStore } from '../stores/lists'
+import { useModalStore } from '../stores/modal'
 
 const props = defineProps({
   shows: {
@@ -9,6 +10,11 @@ const props = defineProps({
 })
 
 const lists = useListsStore()
+const modal = useModalStore()
+
+function open (show) {
+  modal.open(show)
+}
 
 function toggle (list, show) {
   lists.toggle(list, show)
@@ -17,7 +23,7 @@ function toggle (list, show) {
 
 <template>
   <div class="grid">
-    <article v-for="show in props.shows" :key="show.id" class="thumb">
+    <article v-for="show in props.shows" :key="show.id" class="thumb" @click="open(show)">
       <img :src="show.img" :alt="show.title" />
             <div class="actions">
         <button class="action-btn" :class="{ active: lists.isIn('watchlist', show.id) }" @click.stop="toggle('watchlist', show)">

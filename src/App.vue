@@ -3,10 +3,13 @@ import { useAuthStore } from './stores/auth'
 import { useRouter } from 'vue-router'
 import { useSearchStore } from './stores/search'
 import SearchOverlay from './components/SearchOverlay.vue'
+import TitleModal from './components/TitleModal.vue'
+import { useModalStore } from './stores/modal'
 
 const auth = useAuthStore()
 const router = useRouter()
 const search = useSearchStore()
+const modal = useModalStore()
 function logout () {
   search.close()
   auth.logout()
@@ -52,6 +55,8 @@ function submitSearch (e) {
   <router-view />
   <!-- Capa de búsqueda (overlay) -->
   <SearchOverlay v-if="auth.token && search.isOpen" />
+  <!-- Modal de detalles -->
+  <TitleModal v-if="modal.isOpen" />
 
   <!-- Navegación inferior (móvil) -->
   <nav class="bottom-nav">

@@ -1,6 +1,6 @@
 # TrackMySeries
 
-Aplicación **full-stack** para llevar el control de tus series y películas, construida con **Vue 3** (Vite) en el front-end y **Express + Turso** en el back-end.
+Aplicación **full-stack** para llevar el control de las series y películas, construida con **Vue** en el front-end y **Express + Turso** en el back-end.
 
 Permite:
 - Búsqueda de series y películas en TheTVDB (barra superior con resultados en vivo).

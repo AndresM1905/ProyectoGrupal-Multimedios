@@ -14,9 +14,7 @@ const props = defineProps({
     <ShowCard
       v-for="show in props.shows"
       :key="show.id"
-      :img="show.img"
-      :title="show.title"
-      :year="show.year"
+      :show="show"
     />
   </div>
 </template>

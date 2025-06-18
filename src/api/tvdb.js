@@ -90,6 +90,43 @@ export async function searchMovies (query) {
 }
 
 // Obtiene algunos títulos de ejemplo para poblar la pantalla de inicio durante el desarrollo
+export async function getDetails (show) {
+  if (!show || !show.id) throw new Error('show object with id required')
+  const token = await getToken()
+  const endpoint = show.type === 'pelicula' ? `movies/${show.id}` : `series/${show.id}`
+  const res = await fetch(`${API_BASE}/${endpoint}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  })
+  if (!res.ok) throw new Error('Details request failed')
+  const { data } = await res.json()
+  if (!data) return {}
+
+  // Normaliza géneros a array de strings
+  const genresArr = Array.isArray(data.genres) ? data.genres.map(g => g.name || g).filter(Boolean) : []
+  // Normaliza overview (puede venir por idioma)
+  let overviewTxt = ''
+  if (typeof data.overview === 'string') {
+    overviewTxt = data.overview
+  } else if (data.overview && typeof data.overview === 'object') {
+    overviewTxt = data.overview.es || data.overview.en || Object.values(data.overview)[0] || ''
+  }
+  // Normaliza status (puede ser objeto)
+  let statusTxt = ''
+  if (typeof data.status === 'string') {
+    statusTxt = data.status
+  } else if (data.status && typeof data.status === 'object') {
+    statusTxt = data.status.name || ''
+  }
+
+  return {
+    overview: overviewTxt,
+    genres: genresArr,
+    status: statusTxt,
+    runtime: data.averageRuntime || data.runtime || '',
+    rating: data.score || data.rating || null
+  }
+}
+
 export async function getDemoData () {
   const titles = [
     'The Last of Us',
