@@ -111,8 +111,11 @@
   }
   .hero-progress span { font-size: .75rem; color: var(--clr-muted); }
   
-  /* ======= Secciones ===================== */
+  :root { --header-height: 56px; }
+
+/* ======= Secciones ===================== */
   .section { padding: 1.5rem 1rem; background: var(--clr-bg); }
+
   .section-title {
     margin: 0 0 1rem;
     font-size: 1.1rem;

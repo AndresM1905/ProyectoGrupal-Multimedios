@@ -1,11 +1,30 @@
 <script setup>
 import { useModalStore } from '../stores/modal'
+import { useEpisodesStore } from '../stores/episodes'
+import { computed, onMounted } from 'vue'
+import { getEpisodes } from '../api/tvdb'
 
 const props = defineProps({
   show: { type: Object, required: true }
 })
 
 const modal = useModalStore()
+const episodes = useEpisodesStore()
+const total = computed(() => props.show.type === 'serie' ? episodes.getTotal(props.show.id) : 0)
+const percent = computed(() => total.value ? episodes.percentSeen(props.show.id) : 0)
+
+onMounted(async () => {
+  if (props.show.type === 'serie' && !total.value) {
+    try {
+      const seasons = await getEpisodes(props.show.id)
+      const totalEp = Object.values(seasons).reduce((sum, list) => sum + list.length, 0)
+      episodes.setTotal(props.show.id, totalEp)
+    } catch (e) {
+      console.error('Preload episodes', e)
+    }
+  }
+})
+
 function open () {
   modal.open(props.show)
 }
@@ -14,9 +33,41 @@ function open () {
 <template>
   <article class="card" @click="open">
     <img :src="props.show.img" :alt="props.show.title" />
+    <div v-if="percent" class="progress-wrap">
+      <div class="progress-bar"><div class="fill" :style="{ width: percent + '%' }"></div></div>
+      <small class="percent">{{ percent }}%</small>
+    </div>
     <div class="card-info">
       <h4>{{ props.show.title }}</h4>
       <p v-if="props.show.year" class="year">{{ props.show.year }}</p>
     </div>
   </article>
 </template>
+
+<style scoped>
+.card { position: relative; cursor:pointer; }
+img { width:100%; display:block; border-radius:6px; }
+.progress-wrap {
+  position: absolute;
+  left:8px;
+  right:8px;
+  bottom:20px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+.progress-bar {
+  position: absolute;
+  left:8px;
+  right:8px;
+  
+  height:6px;
+  background: var(--clr-muted-20, #444);
+  border-radius:0 0 6px 6px;
+  overflow:hidden;
+}
+.progress-bar .fill { height:100%; background: var(--clr-accent,#e91e63); }
+.percent { margin-top:6px; font-size:0.65rem; color:var(--clr-accent,#e91e63); }
+.card-info { padding-top:0.25rem; text-align:center; }
+.year { color:var(--clr-muted); font-size:0.8rem; margin:0; }
+</style>

@@ -1,6 +1,7 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { getEpisodes } from '../api/tvdb'
+import { useListsStore } from '../stores/lists'
 import { useEpisodesStore } from '../stores/episodes'
 
 const props = defineProps({
@@ -10,22 +11,41 @@ const props = defineProps({
 const emit = defineEmits(['close'])
 
 const episodesStore = useEpisodesStore()
+const listsStore = useListsStore()
 const seasons = ref({})
 const loading = ref(true)
-const selectedSeason = ref(null)
+const selectedSeason = ref(null) // almacena el número de temporada como string
 
-onMounted(async () => {
+async function loadSeasons() {
+  loading.value = true
+  selectedSeason.value = null
   try {
     seasons.value = await getEpisodes(props.series.id)
+    episodesStore.setTotal(props.series.id, Object.values(seasons.value).reduce((s, l) => s + l.length, 0))
   } catch (e) {
     console.error(e)
   } finally {
     loading.value = false
   }
-})
+}
+
+onMounted(loadSeasons)
+
+watch(() => props.series.id, loadSeasons)
+
+function syncWatched () {
+  const inWatched = listsStore.isIn('watched', props.series.id, props.series.type)
+  const seen = episodesStore.countSeen(props.series.id) > 0
+  if (seen && !inWatched) {
+    listsStore.toggle('watched', props.series)
+  } else if (!seen && inWatched) {
+    listsStore.toggle('watched', props.series)
+  }
+}
 
 function toggle(epId) {
   episodesStore.toggleEpisode(props.series.id, epId)
+  syncWatched()
 }
 
 const totalEpisodes = computed(() => {
@@ -34,6 +54,11 @@ const totalEpisodes = computed(() => {
 
 const seenCount = computed(() => episodesStore.countSeen(props.series.id))
 const progress = computed(() => (totalEpisodes.value ? Math.round(seenCount.value / totalEpisodes.value * 100) : 0))
+
+const currentSeasonEpisodes = computed(() => {
+  if (selectedSeason.value === null) return []
+  return seasons.value[selectedSeason.value] || []
+})
 
 // resumen por temporada
 const seasonsSummary = computed(() => {
@@ -63,6 +88,7 @@ function toggleSeasonAll(num) {
       episodesStore.toggleEpisode(props.series.id, ep.id)
     }
   })
+  syncWatched()
 }
 </script>
 
@@ -89,7 +115,7 @@ function toggleSeasonAll(num) {
               <span class="season-title">Season {{ num }}</span>
               <div class="season-bar"><div class="fill" :style="{ width: info.percent + '%' }"></div></div>
               <span class="season-count">{{ info.seen }}/{{ info.total }}</span>
-              <button class="arrow" @click="selectedSeason = Number(num)"><i class="fa-solid fa-chevron-right" /></button>
+              <button class="arrow" @click="selectedSeason = num"><i class="fa-solid fa-chevron-right" /></button>
             </li>
           </ul>
         </template>
@@ -99,7 +125,7 @@ function toggleSeasonAll(num) {
           <button class="back-btn" @click="selectedSeason = null"><i class="fa-solid fa-chevron-left" /> Seasons</button>
           <h3 class="season-heading">Season {{ selectedSeason }}</h3>
           <ul class="episodes-list">
-            <li v-for="ep in seasons[selectedSeason]" :key="ep.id" @click="toggle(ep.id)" :class="{ seen: episodesStore.isSeen(series.id, ep.id) }">
+            <li v-for="ep in currentSeasonEpisodes" :key="ep.id" @click="toggle(ep.id)" :class="{ seen: episodesStore.isSeen(series.id, ep.id) }">
               <span class="checkbox">
                 <i :class="episodesStore.isSeen(series.id, ep.id) ? 'fa-solid fa-check-square' : 'fa-regular fa-square'" />
               </span>

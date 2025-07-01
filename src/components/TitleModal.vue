@@ -33,6 +33,7 @@ watch(() => modal.currentShow, async (show) => {
     try {
       const seasons = await getEpisodes(show.id)
       totalEpisodes.value = Object.values(seasons).reduce((sum, list) => sum + list.length, 0)
+      episodesStore.setTotal(show.id, totalEpisodes.value)
     } catch (e) {
       console.error('episodes count', e)
       totalEpisodes.value = 0

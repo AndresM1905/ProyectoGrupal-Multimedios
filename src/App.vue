@@ -50,7 +50,7 @@ function submitSearch (e) {
   </header>
 
   <!-- Spacing element to push content below fixed header -->
-  <div style="height: var(--header-height);"></div>
+  <div style="height: calc(var(--header-height) + 16px);"></div>
   <!-- Contenido principal -->
   <router-view />
   <!-- Capa de búsqueda (overlay) -->
@@ -68,6 +68,10 @@ function submitSearch (e) {
 </template>
 
 <style scoped>
+:root {
+  --header-height: 56px;
+}
+
 .header {
   position: fixed;
   top: 0;
