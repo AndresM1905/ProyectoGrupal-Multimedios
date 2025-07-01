@@ -29,7 +29,10 @@ async function loadSeasons() {
   }
 }
 
-onMounted(loadSeasons)
+onMounted(async () => {
+  await episodesStore.loadFromApi(props.series.id)
+  await loadSeasons()
+})
 
 watch(() => props.series.id, loadSeasons)
 
@@ -54,7 +57,7 @@ function syncWatched () {
 }
 
 function toggle(epId) {
-  episodesStore.toggleEpisode(props.series.id, epId)
+  episodesStore.toggleEpisode(props.series.id, epId, selectedSeason.value)
   syncWatched()
 }
 
@@ -94,8 +97,7 @@ function toggleSeasonAll(num) {
   list.forEach(ep => {
     const already = episodesStore.isSeen(props.series.id, ep.id)
     if (summary.allSeen || (!summary.allSeen && !already)) {
-     
-      episodesStore.toggleEpisode(props.series.id, ep.id)
+      episodesStore.toggleEpisode(props.series.id, ep.id, num)
     }
   })
   syncWatched()

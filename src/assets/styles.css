@@ -16,6 +16,8 @@
   body {
     margin: 0;
     font-family: 'Poppins', sans-serif;
+
+    overflow-x: hidden;
     background: var(--clr-bg);
     color: var(--clr-text);
     -webkit-font-smoothing: antialiased;
@@ -111,10 +113,10 @@
   }
   .hero-progress span { font-size: .75rem; color: var(--clr-muted); }
   
-  :root { --header-height: 56px; }
+  :root { --header-height: 56px; --bottom-nav-height: 56px; }
 
 /* ======= Secciones ===================== */
-  .section { padding: 1.5rem 1rem; background: var(--clr-bg); }
+  .section { padding: 1rem .75rem; background: var(--clr-bg); }
 
   .section-title {
     margin: 0 0 1rem;
@@ -127,26 +129,29 @@
   
   /* =======“Continuar viendo” ============================== */
   .carousel {
-    display: flex;
-    gap: 1rem;
-    overflow-x: auto;
-    padding: 0 1rem 0.5rem 1rem; /* symmetric padding */
+     display: flex;
+     gap: .5rem;
+     overflow-x: auto;
+     overflow-y: hidden;
+     padding: 0 .25rem .5rem .25rem;
     scroll-snap-type: x mandatory;
     scrollbar-width: none;
     background: var(--clr-bg); /* asegúrate que fondo sea negro */
   }
-  /* pseudo-element para ocupar el gap final y mantener el fondo */
+  /* pseudo-elemento de relleno para mantener fondo al final */
   .carousel::after {
     content: '';
-    flex: 0 0 auto; width: 1rem; min-width: 1rem; /* igual al gap y no se comprime */
+    flex: 0 0 .25rem;
     height: 100%;
     background: var(--clr-bg);
   }
   .carousel::-webkit-scrollbar { display: none; }
   
+  /* Tarjeta dentro de carrusel */
   .card {
-    flex: 0 0 60%;
-    max-width: 220px;
+    flex: 0 0 110px;
+    width: 110px;
+    height: 165px;
     background: var(--clr-card);
     border-radius: var(--radius);
     box-shadow: 0 8px 12px rgba(0,0,0,.12);
@@ -169,8 +174,8 @@
   /* ======= Librería ============== */
   .grid {
     display: grid;
-    gap: 1rem;
-    grid-template-columns: repeat(auto-fill, minmax(46%, 1fr));
+    gap: .5rem;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   }
   .thumb {
     text-align: center;
@@ -242,14 +247,14 @@
   
   /* ======= Bottom Navigation (solo móvil) =============== */
   .bottom-nav {
-    position: fixed;
+     position: fixed;
     bottom: 0;
     left: 0;
     width: 100%;
     background: var(--clr-surface);
     display: flex;
     justify-content: space-around;
-    padding: .55rem 0 .4rem;
+    padding: .55rem 0 calc(env(safe-area-inset-bottom) + .4rem);
     border-top: 1px solid #222;
   }
   .nav-link {
@@ -270,7 +275,12 @@
     .grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
   }
   
-  @media (min-width: 1024px) {
+  /* ====== Evitar que bottom-nav tape contenido ========= */
+@media (max-width: 1023px) {
+  #app { padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom)); }
+}
+
+@media (min-width: 1024px) {
   
     body { display: block; }
   

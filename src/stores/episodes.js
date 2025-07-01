@@ -1,9 +1,12 @@
+
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 
 // Guarda los episodios vistos por serie
 // estructura: { [seriesId]: Set(episodeId) } // seen
 // totals: { [seriesId]: number }
+import { api } from './auth'
+
 export const useEpisodesStore = defineStore('episodes', () => {
   const seen = ref({})
   const totals = ref({})
@@ -12,12 +15,40 @@ export const useEpisodesStore = defineStore('episodes', () => {
     return !!seen.value[seriesId]?.has(episodeId)
   }
 
-  function toggleEpisode (seriesId, episodeId) {
+  async function toggleEpisode (seriesId, episodeId, season) {
     if (!seen.value[seriesId]) seen.value[seriesId] = new Set()
-    if (seen.value[seriesId].has(episodeId)) {
+    const isCurrentlySeen = seen.value[seriesId].has(episodeId)
+    if (isCurrentlySeen) {
       seen.value[seriesId].delete(episodeId)
     } else {
       seen.value[seriesId].add(episodeId)
+    }
+    // Persistir
+    try {
+      await api.post('/episodes', {
+        show_id: seriesId,
+        season,
+        episode: episodeId,
+        seen: !isCurrentlySeen
+      })
+    } catch (e) {
+      console.error('sync episode', e)
+    }
+  }
+
+  async function loadFromApi (seriesId) {
+    try {
+      const { data } = await api.get('/episodes', { params: seriesId ? { show_id: seriesId } : {} })
+            // Reemplazar sets para reflejar exactamente lo que viene del backend
+      if (seriesId) {
+        seen.value[seriesId] = new Set()
+      }
+      data.forEach(row => {
+        if (!seen.value[row.show_id]) seen.value[row.show_id] = new Set()
+        if (row.seen) seen.value[row.show_id].add(row.episode)
+      })
+    } catch (e) {
+      console.error('load episodes', e)
     }
   }
 
@@ -63,5 +94,5 @@ export const useEpisodesStore = defineStore('episodes', () => {
     localStorage.setItem(LS_KEY, JSON.stringify({ seen: serializable, totals: totalsObj }))
   }, { deep: true })
 
-  return { seen, totals, isSeen, toggleEpisode, countSeen, setTotal, getTotal, percentSeen }
+  return { seen, totals, isSeen, toggleEpisode, loadFromApi, countSeen, setTotal, getTotal, percentSeen }
 })

@@ -45,29 +45,24 @@ function open () {
 </template>
 
 <style scoped>
-.card { position: relative; cursor:pointer; }
+.card { position: relative; cursor:pointer; height:auto; }
 img { width:100%; display:block; border-radius:6px; }
 .progress-wrap {
-  position: absolute;
-  left:8px;
-  right:8px;
-  bottom:20px;
+  margin-top: .25rem;
   display:flex;
   flex-direction:column;
   align-items:center;
 }
 .progress-bar {
-  position: absolute;
-  left:8px;
-  right:8px;
+  width:100%;
   
   height:6px;
   background: var(--clr-muted-20, #444);
-  border-radius:0 0 6px 6px;
+  border-radius:4px;
   overflow:hidden;
 }
 .progress-bar .fill { height:100%; background: var(--clr-accent,#e91e63); }
 .percent { margin-top:6px; font-size:0.65rem; color:var(--clr-accent,#e91e63); }
-.card-info { padding-top:0.25rem; text-align:center; }
+.card-info { padding-top:0.2rem; text-align:center; }
 .year { color:var(--clr-muted); font-size:0.8rem; margin:0; }
 </style>

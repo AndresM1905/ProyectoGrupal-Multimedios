@@ -106,6 +106,42 @@ app.delete('/lists', auth, async (req, res) => {
   res.json({ ok: true })
 })
 
+// ================= Episodios vistos ==================
+// Obtener episodios vistos (opcional show_id)
+app.get('/episodes', auth, async (req, res) => {
+  const { show_id } = req.query
+  const sql = show_id
+    ? 'SELECT * FROM episodes_seen WHERE user_id = ? AND show_id = ?'
+    : 'SELECT * FROM episodes_seen WHERE user_id = ?'
+  const { rows } = await db.execute({ sql, args: show_id ? [req.user.sub, show_id] : [req.user.sub] })
+  res.json(rows)
+})
+
+// Upsert episodio
+app.post('/episodes', auth, async (req, res) => {
+  const { show_id, season, episode, seen = true } = req.body
+  if (show_id == null || season == null || episode == null) {
+    return res.status(400).json({ error: 'Datos incompletos' })
+  }
+  await db.execute({
+    sql: `INSERT INTO episodes_seen (user_id, show_id, season, episode, seen) VALUES (?, ?, ?, ?, ?)
+          ON CONFLICT(user_id, show_id, season, episode)
+          DO UPDATE SET seen = excluded.seen, updated_at = CURRENT_TIMESTAMP`,
+    args: [req.user.sub, show_id, season, episode, seen ? 1 : 0]
+  })
+  res.json({ ok: true })
+})
+
+// Borrar progreso de una serie
+app.delete('/episodes/:showId', auth, async (req, res) => {
+  const { showId } = req.params
+  await db.execute({
+    sql: 'DELETE FROM episodes_seen WHERE user_id = ? AND show_id = ?',
+    args: [req.user.sub, showId]
+  })
+  res.json({ ok: true })
+})
+
 // Iniciar servidor
 const PORT = process.env.PORT || 4000
 app.listen(PORT, () => console.log(`API escuchando en http://localhost:${PORT}`))

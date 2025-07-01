@@ -107,14 +107,17 @@ function toggle (list) {
   z-index: 1300;
   animation: fadeIn 0.15s ease-out;
 }
-.sheet {
+.sheet { 
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   background: var(--clr-bg);
   width: 100%;
-  max-width: 500px;
+  max-width: 100vw;
+  height: 100vh;
+  border-radius: 0;
+  padding-bottom: calc(env(safe-area-inset-bottom) + 1rem);
   border-radius: 12px;
   padding: 1rem 1.25rem 2rem;
   box-sizing: border-box;
@@ -165,4 +168,23 @@ function toggle (list) {
 }
 .sheet { display:flex; flex-direction:column; max-height:90vh; overflow:hidden; }
 .scroll { flex:1; overflow-y:auto; width:100%; }
+@media (max-width: 600px) {
+  .backdrop { justify-content:center; align-items:flex-end; overflow:hidden; }
+  .sheet {
+    max-height: 80vh;
+    width: 100%; max-width:100%;
+    max-height: 90vh;
+    max-width:none;
+    border-radius: 16px 16px 0 0;
+    animation: slideUp .25s ease-out;
+  }
+  .cover { width: 40vw; }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+}
+@media (min-width: 900px) {
+  .sheet {
+    max-width: 700px;
+  }
+  .cover { width: 160px; }
+}
 </style>

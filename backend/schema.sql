@@ -19,3 +19,15 @@ CREATE TABLE IF NOT EXISTS lists (
   added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
+
+-- Progreso de episodios vistos por usuario
+CREATE TABLE IF NOT EXISTS episodes_seen (
+  user_id TEXT NOT NULL,
+  show_id INTEGER NOT NULL,
+  season INTEGER NOT NULL,
+  episode INTEGER NOT NULL,
+  seen BOOLEAN NOT NULL DEFAULT 1,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (user_id, show_id, season, episode),
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
