@@ -16,10 +16,6 @@ const selectedSeason = ref(null)
 onMounted(async () => {
   try {
     seasons.value = await getEpisodes(props.series.id)
-    // inicia en vista resumen
-    // si prefieres abrir directamente la primera temporada cambia aquí
-    // const first = Math.min(...Object.keys(seasons.value).map(n => Number(n))) || 1
-    // selectedSeason.value = first
   } catch (e) {
     console.error(e)
   } finally {
