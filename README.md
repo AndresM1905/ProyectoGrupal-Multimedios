@@ -49,14 +49,20 @@ cd ..                 # vuelve a raíz del proyecto
    * `JWT_SECRET` – cualquier string random.
 
 ### 5. Instalar Turso CLI y crear la base de datos
+
+Turso es "SQLite en la nube".
+
+Pasos completos:
 ```bash
 # Para la mac con Homebrew
-brew install turso      # instala también sqld
+brew install turso      # instalar también sqld
 
 # En Linux / Windows (otros métodos)
-curl -sSf https://get.tur.so/install.sh | sh   # o revisar en internet
+curl -sSf https://get.tur.so/install.sh | sh   # script oficial para Linux
+# o revisar las instrucciones para Windows PowerShell
 
-turso auth login --headless   # abre link, copia token ➜ turso config set token "..."
+turso auth login --headless   # genera enlace en el navegador, inicia sesión y pega el token
+# El comando de arriba ya guarda el token en tu máquina (~/.config).
 
 turso db create trackmyseries           # crea la base
 
@@ -66,10 +72,28 @@ turso db tokens create trackmyseries    # genera token de autenticación
 ```
 Coloca `TURSO_URL` y `TURSO_AUTH_TOKEN` en `backend/.env`.
 
+Si necesitas más de una base (p. ej. desarrollo y producción) repite el
+comando `turso db create` con otro nombre.
+
+**¿Qué es la URL libsql://…?**  
+Es la dirección de tu instancia y se parece a:
+```
+libsql://trackmyseries-andres19m.turso.io
+```
+La usaremos en la variable `TURSO_URL`.
+
+**¿Para qué sirve el token de la base?**  
+Controla quién puede escribir/leer. Copia el `auth_token` que te da el
+CLI y ponlo en `TURSO_AUTH_TOKEN`.
+
 ### 6. Aplicar el esquema SQL (tablas `users` y `lists`)
 ```bash
-cat backend/schema.sql | turso db shell trackmyseries
+turso db shell trackmyseries < backend/schema.sql  # carga las tablas
 ```
+
+#### ¿Puedo actualizar el esquema más tarde?
+Basta con volver a lanzar `turso db shell < nuevo.sql`. La base se
+migra al instante.
 
 ### 7. Arrancar la API
 ```bash

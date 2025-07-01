@@ -90,6 +90,56 @@ export async function searchMovies (query) {
 }
 
 // Obtiene algunos títulos de ejemplo para poblar la pantalla de inicio durante el desarrollo
+// Obtiene temporadas y episodios de una serie y los agrupa por número de temporada
+export async function getEpisodes (seriesId) {
+  if (!seriesId) return {}
+  const token = await getToken()
+
+  // usamos API_BASE ya definido arriba
+  const seasons = {}
+  let page = 0
+  let hasMore = true
+
+  let scheme = 'default'
+  while (hasMore) {
+    const url = `${API_BASE}/series/${seriesId}/episodes/${scheme}?page=${page}`
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+    if (!res.ok) throw new Error('Error al obtener episodios')
+    const json = await res.json()
+    const list = Array.isArray(json.data) ? json.data : (Array.isArray(json.data?.episodes) ? json.data.episodes : [])
+    if (list.length === 0) {
+      // si usando "default" no hay datos, probamos con "official"
+      if (scheme === 'default') {
+        scheme = 'official'
+        page = 1
+        continue
+      }
+
+      hasMore = false
+      break
+    }
+
+    list.forEach(ep => {
+      const seasonNum = ep.airedSeason || ep.seasonNumber || 0
+      if (!seasons[seasonNum]) seasons[seasonNum] = []
+      seasons[seasonNum].push({
+        id: ep.id,
+        name: ep.name || ep.overview || `E${ep.number}`,
+        number: ep.number || ep.airedEpisodeNumber,
+        overview: ep.overview || '',
+        image: ep.image || ''
+      })
+    })
+
+    page = json.links?.next ?? null
+    if (page === null) hasMore = false
+  }
+
+  // Ordena episodios y temporadas
+  Object.values(seasons).forEach(list => list.sort((a, b) => a.number - b.number))
+  return seasons
+}
+
 export async function getDetails (show) {
   if (!show || !show.id) throw new Error('show object with id required')
   const token = await getToken()

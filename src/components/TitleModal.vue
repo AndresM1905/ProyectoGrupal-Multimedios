@@ -1,14 +1,22 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
+import EpisodeTracker from './EpisodeTracker.vue'
 import { useModalStore } from '../stores/modal'
 import { useListsStore } from '../stores/lists'
-import { getDetails } from '../api/tvdb'
+import { useEpisodesStore } from '../stores/episodes'
+import { getDetails, getEpisodes } from '../api/tvdb'
 
 const modal = useModalStore()
 const lists = useListsStore()
 
 const details = ref(null)
+const totalEpisodes = ref(0)
 const loading = ref(false)
+const showEpisodes = ref(false)
+
+const episodesStore = useEpisodesStore()
+const seenCount = computed(() => episodesStore.countSeen(modal.currentShow?.id))
+const progress = computed(() => totalEpisodes.value ? Math.round(seenCount.value / totalEpisodes.value * 100) : 0)
 
 watch(() => modal.currentShow, async (show) => {
   if (!show) return
@@ -20,6 +28,19 @@ watch(() => modal.currentShow, async (show) => {
     console.error(err)
   } finally {
     loading.value = false
+
+  // si es serie, calculo episodios totales
+  if (show && show.type === 'serie') {
+    try {
+      const seasons = await getEpisodes(show.id)
+      totalEpisodes.value = Object.values(seasons).reduce((sum, list) => sum + list.length, 0)
+    } catch (e) {
+      console.error('episodes count', e)
+      totalEpisodes.value = 0
+    }
+  } else {
+    totalEpisodes.value = 0
+  }
   }
 }, { immediate: true })
 
@@ -49,6 +70,11 @@ function toggle (list) {
         <li v-if="details.runtime"><strong>Duración:</strong> {{ details.runtime }} min</li>
         <li v-if="details.status"><strong>Estado:</strong> {{ details.status }}</li>
       </ul>
+      <!-- barra progreso serie -->
+      <div v-if="modal.currentShow.type === 'serie' && totalEpisodes" class="series-progress">
+        <p class="progress-text">{{ seenCount }} / {{ totalEpisodes }} · {{ progress }}%</p>
+        <div class="progress-bar"><div class="fill" :style="{ width: progress + '%' }"></div></div>
+      </div>
       <!-- botones -->
       <div class="modal-actions">
         <button class="modal-btn" :class="{ active: lists.isIn('watchlist', modal.currentShow.id) }" @click="toggle('watchlist')">
@@ -60,9 +86,13 @@ function toggle (list) {
         <button class="modal-btn" :class="{ active: lists.isIn('favorites', modal.currentShow.id) }" @click="toggle('favorites')">
           <i :class="lists.isIn('favorites', modal.currentShow.id) ? 'fa-solid fa-heart' : 'fa-regular fa-heart'" />
         </button>
+        <button v-if="details && modal.currentShow.type === 'serie'" class="episodes-btn" @click="showEpisodes = true">
+          Ver episodios
+        </button>
       </div>
     </div>
   </div>
+  <EpisodeTracker v-if="showEpisodes" :series="modal.currentShow" @close="showEpisodes = false" />
 </template>
 
 <style scoped>
@@ -123,6 +153,10 @@ function toggle (list) {
 .overview { margin: 1rem 0; font-size: .9rem; line-height: 1.35; text-align: center; }
 .meta { list-style: none; padding: 0; margin: 0 0 1rem; font-size: .8rem; text-align: center; color: var(--clr-muted); }
 .meta li + li { margin-top: .25rem; }
+.series-progress { width:100%; margin-top:1rem; }
+.series-progress .progress-bar { width:100%; height:8px; background: var(--clr-muted-20, #444); border-radius:4px; overflow:hidden; margin-top:4px; }
+.series-progress .fill { height:100%; background: var(--clr-accent, #e91e63); transition: width .25s ease; }
+.series-progress .progress-text { margin:0; font-size:.8rem; text-align:center; color:var(--clr-muted); }
 .loading { margin: 1rem 0; font-size: .9rem; color: var(--clr-muted); text-align: center; }
 @keyframes fadeIn {
   from { opacity: 0; }
