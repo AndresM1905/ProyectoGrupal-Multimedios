@@ -12,7 +12,6 @@ const lists = useListsStore()
 const details = ref(null)
 const totalEpisodes = ref(0)
 const loading = ref(false)
-const showEpisodes = ref(false)
 
 const episodesStore = useEpisodesStore()
 const seenCount = computed(() => episodesStore.countSeen(modal.currentShow?.id))
@@ -62,20 +61,22 @@ function toggle (list) {
       <h2 class="title">{{ modal.currentShow.title }}</h2>
       <p v-if="modal.currentShow.year" class="year">{{ modal.currentShow.year }}</p>
 
-      <!-- sinopsis / detalles -->
-      <div v-if="loading" class="loading">Cargando…</div>
-      <p v-else-if="details && details.overview" class="overview">{{ details.overview }}</p>
-      <ul v-if="details && (details.genres?.length || details.runtime || details.status)" class="meta">
-        <li v-if="details.genres?.length"><strong>Géneros:</strong> {{ details.genres.join(', ') }}</li>
-        <li v-if="details.runtime"><strong>Duración:</strong> {{ details.runtime }} min</li>
-        <li v-if="details.status"><strong>Estado:</strong> {{ details.status }}</li>
-      </ul>
-      <!-- barra progreso serie -->
-      <div v-if="modal.currentShow.type === 'serie' && totalEpisodes" class="series-progress">
-        <p class="progress-text">{{ seenCount }} / {{ totalEpisodes }} · {{ progress }}%</p>
-        <div class="progress-bar"><div class="fill" :style="{ width: progress + '%' }"></div></div>
+      <!-- cuerpo scrollable -->
+      <div class="scroll">
+        <div v-if="loading" class="loading">Cargando…</div>
+        <p v-else-if="details && details.overview" class="overview">{{ details.overview }}</p>
+        <ul v-if="details && (details.genres?.length || details.runtime || details.status)" class="meta">
+          <li v-if="details.genres?.length"><strong>Géneros:</strong> {{ details.genres.join(', ') }}</li>
+          <li v-if="details.runtime"><strong>Duración:</strong> {{ details.runtime }} min</li>
+          <li v-if="details.status"><strong>Estado:</strong> {{ details.status }}</li>
+        </ul>
+        <div v-if="modal.currentShow.type === 'serie' && totalEpisodes" class="series-progress">
+          <p class="progress-text">{{ seenCount }} / {{ totalEpisodes }} · {{ progress }}%</p>
+          <div class="progress-bar"><div class="fill" :style="{ width: progress + '%' }"></div></div>
+        </div>
+        <EpisodeTracker v-if="modal.currentShow.type === 'serie'" :series="modal.currentShow" embedded />
       </div>
-      <!-- botones -->
+      <!-- botones fijos -->
       <div class="modal-actions">
         <button class="modal-btn" :class="{ active: lists.isIn('watchlist', modal.currentShow.id) }" @click="toggle('watchlist')">
           <i :class="lists.isIn('watchlist', modal.currentShow.id) ? 'fa-solid fa-bookmark' : 'fa-regular fa-bookmark'" />
@@ -86,13 +87,12 @@ function toggle (list) {
         <button class="modal-btn" :class="{ active: lists.isIn('favorites', modal.currentShow.id) }" @click="toggle('favorites')">
           <i :class="lists.isIn('favorites', modal.currentShow.id) ? 'fa-solid fa-heart' : 'fa-regular fa-heart'" />
         </button>
-        <button v-if="details && modal.currentShow.type === 'serie'" class="episodes-btn" @click="showEpisodes = true">
-          Ver episodios
-        </button>
       </div>
+
+    
     </div>
   </div>
-  <EpisodeTracker v-if="showEpisodes" :series="modal.currentShow" @close="showEpisodes = false" />
+  
 </template>
 
 <style scoped>
@@ -162,4 +162,6 @@ function toggle (list) {
   from { opacity: 0; }
   to { opacity: 1; }
 }
+.sheet { display:flex; flex-direction:column; max-height:90vh; overflow:hidden; }
+.scroll { flex:1; overflow-y:auto; width:100%; }
 </style>

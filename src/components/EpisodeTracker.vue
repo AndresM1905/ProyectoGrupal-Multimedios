@@ -4,7 +4,8 @@ import { getEpisodes } from '../api/tvdb'
 import { useEpisodesStore } from '../stores/episodes'
 
 const props = defineProps({
-  series: { type: Object, required: true }
+  series: { type: Object, required: true },
+  embedded: { type: Boolean, default: false }
 })
 const emit = defineEmits(['close'])
 
@@ -58,7 +59,7 @@ function toggleSeasonAll(num) {
   list.forEach(ep => {
     const already = episodesStore.isSeen(props.series.id, ep.id)
     if (summary.allSeen || (!summary.allSeen && !already)) {
-      // if all seen, unmark all; else mark those not marked
+     
       episodesStore.toggleEpisode(props.series.id, ep.id)
     }
   })
@@ -66,10 +67,10 @@ function toggleSeasonAll(num) {
 </script>
 
 <template>
-  <div class="tracker-backdrop" @click.self="emit('close')">
+  <div :class="props.embedded ? 'embedded-wrapper' : 'tracker-backdrop'" @click.self="props.embedded ? null : () => emit('close')">
     <div class="tracker-sheet">
       <header>
-        <button class="close-btn" @click="emit('close')" aria-label="Cerrar"><i class="fa-solid fa-xmark" /></button>
+        <button v-if="!props.embedded" class="close-btn" @click="emit('close')" aria-label="Cerrar"><i class="fa-solid fa-xmark" /></button>
         <h2>{{ series.title }}</h2>
         <p class="progress-text">{{ seenCount }} / {{ totalEpisodes }} · {{ progress }}%</p>
         <div class="progress-bar"><div class="fill" :style="{ width: progress + '%' }" /></div>
@@ -117,17 +118,29 @@ function toggleSeasonAll(num) {
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,0.8);
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  z-index:1400;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1400;
 }
+
+/* Modo embebido dentro del modal principal */
+.embedded-wrapper {
+  width: 100%;
+}
+.embedded-wrapper .tracker-sheet {
+  max-height: none;
+  overflow: visible;
+  padding: 0;
+  background: transparent;
+}
+
 .tracker-sheet {
   background: var(--clr-bg);
   width: 100%;
   max-width: 700px;
   max-height: 90vh;
-  overflow-y: auto;
+  overflow-y: hidden; /* only relevant when embedded */
   border-radius: 12px;
   padding: 1rem 1.25rem 2rem;
   box-sizing: border-box;
