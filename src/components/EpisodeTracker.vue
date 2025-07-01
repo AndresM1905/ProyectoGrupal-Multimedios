@@ -37,8 +37,18 @@ function syncWatched () {
   const inWatched = listsStore.isIn('watched', props.series.id, props.series.type)
   const seen = episodesStore.countSeen(props.series.id) > 0
   if (seen && !inWatched) {
+    // añadir al final (push)
     listsStore.toggle('watched', props.series)
+  } else if (seen && inWatched) {
+    // ya está, pero queremos refrescar su posición (mover al final)
+    const arr = listsStore.watched
+    const idx = arr.findIndex(s => s.id === props.series.id && (s.type||'serie') === props.series.type)
+    if (idx !== -1) {
+      const [item] = arr.splice(idx, 1)
+      arr.push(item)
+    }
   } else if (!seen && inWatched) {
+    // quitar porque ya no tiene vistos
     listsStore.toggle('watched', props.series)
   }
 }
