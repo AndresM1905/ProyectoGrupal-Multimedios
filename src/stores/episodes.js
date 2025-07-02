@@ -11,6 +11,7 @@ import { api } from './auth'
 export const useEpisodesStore = defineStore('episodes', () => {
   const seen = ref({})
   const totals = reactive({})
+  const ready = ref(false)
   const counters = reactive({})  // número de episodios vistos por serie (reactivo)
 
   function key (id) { return String(id) }
@@ -59,6 +60,7 @@ export const useEpisodesStore = defineStore('episodes', () => {
   }
 
   async function loadFromApi (seriesId) {
+    ready.value = false
     try {
       const idParam = seriesId ? key(seriesId) : undefined
       const { data } = await api.get('/episodes', { params: idParam ? { show_id: idParam } : {} })
@@ -74,6 +76,7 @@ export const useEpisodesStore = defineStore('episodes', () => {
           counters[key(row.show_id)] = row.seen_count || 0
           // sin sets individuales; crea uno vacío para evitar undefined
           if (!seen.value[key(row.show_id)]) seen.value[key(row.show_id)] = new Set()
+          // contador ya establecido, no recalculamos para no perder valor
           return
         }
         // Formato antiguo (una fila por episodio)
@@ -112,8 +115,14 @@ export const useEpisodesStore = defineStore('episodes', () => {
     } catch (e) {
       console.error('load episodes', e)
     }
-    // Recalcula contadores tras posibles backfills
-    Object.keys(seen.value).forEach(id => updateCounter(id))
+    // Recalcula contadores sólo donde aún no tengamos contador (evita sobreescribir valores agregados)
+    Object.keys(seen.value).forEach(id => {
+      const idKey = key(id)
+      if (counters[idKey] === undefined || counters[idKey] === 0) {
+        updateCounter(id)
+      }
+    })
+    ready.value = true
   }
 
   function countSeen (seriesId) {
@@ -164,5 +173,5 @@ export const useEpisodesStore = defineStore('episodes', () => {
     localStorage.setItem(LS_KEY, JSON.stringify({ seen: serializable, totals: totalsObj }))
   }, { deep: true })
 
-  return { seen, totals, counters, isSeen, toggleEpisode, loadFromApi, countSeen, setTotal, getTotal, percentSeen, getPercent }
+  return { seen, totals, counters, ready, isSeen, toggleEpisode, loadFromApi, countSeen, setTotal, getTotal, percentSeen, getPercent }
 })

@@ -186,6 +186,26 @@ app.get('/episodes', auth, async (req, res) => {
       return out
     })
     console.log('[EPISODES] consulta OK', rows.length, 'filas')
+    // Back-fill total_episodes si viene 0 y hay episodios vistos
+    for (const row of rows) {
+      if (!row.total_episodes && row.seen_count > 0) {
+        try {
+          const totalEp = await fetchTotalEpisodes(row.show_id)
+          if (totalEp) {
+            row.total_episodes = totalEp
+            // Actualiza en base (pone una sola fila dummy season=0 episode=0)
+            await db.execute({
+              sql: `INSERT INTO episodes_seen (user_id, show_id, season, episode, seen, total_episodes)
+                     VALUES (?, ?, 0, 0, 1, ?)
+                     ON CONFLICT(user_id, show_id, season, episode) DO UPDATE SET total_episodes = EXCLUDED.total_episodes`,
+              args: [req.user.sub, row.show_id, totalEp]
+            })
+          }
+        } catch (err) {
+          console.error('backfill total_episodes', row.show_id, err.message)
+        }
+      }
+    }
   } catch (err) {
     console.error('[EPISODES] error SQL', err)
     return res.status(500).json({ error: 'db error' })

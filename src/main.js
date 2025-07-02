@@ -1,4 +1,4 @@
-import { createApp } from 'vue'
+import { createApp, nextTick } from 'vue'
 import { createPinia } from 'pinia'
 import router from './router'
 // import './style.css'  // eliminado para prevenir estilos base que interferían en mobile
@@ -23,8 +23,8 @@ async function bootstrap () {
   const search = useSearchStore()
   search.close()
 
-  // No montamos todavía: primero cargamos datos clave (listas + episodios) para que Safari tenga porcentajes correctos
-  // app.mount('#app')
+  // Montamos de inmediato para mostrar UI mientras se cargan datos; los componentes se actualizarán reactivamente
+  app.mount('#app')
 
   // precarga totales de episodios sin bloquear la UI
   async function preloadTotals (listsStore, episodesStore) {
@@ -59,10 +59,19 @@ async function bootstrap () {
     if (isAuth) {
       // cargar listas y progreso
       await lists.loadFromApi()
+      // Pre-crea propiedades reactivas de contador para todas las series antes de montar, evitando el problema de tracking en Safari
+      ;['watchlist','watched','favorites'].forEach(name => {
+        lists[name].forEach(item => {
+           const idKey = String(item.id)
+           if (!episodesStore.counters[idKey]) episodesStore.counters[idKey] = 0
+           if (!episodesStore.totals[idKey]) episodesStore.totals[idKey] = 0
+        })
+      })
       await episodesStore.loadFromApi()
       await preloadTotals(lists, episodesStore)
       // Espera a que la reactividad calcule contadores antes del primer render
-      await import('vue').then(m => m.nextTick())
+      await nextTick()
+      await nextTick()
       if (!app._container) app.mount('#app')
 
     } else {

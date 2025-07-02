@@ -11,10 +11,12 @@ const props = defineProps({
 const modal = useModalStore()
 const episodes = useEpisodesStore()
 const total = computed(() => props.show.type === 'serie' ? episodes.getTotal(props.show.id) : 0)
-const seenCount = computed(() => episodes.countSeen(props.show.id))
-const percent = computed(() => total.value ? episodes.getPercent(props.show.id) : 0)
-// Mostrar barra solo si existe total Y se ha visto al menos un episodio
-const showProgress = computed(() => total.value > 0)
+const counter = computed(() => episodes.counters[String(props.show.id)] || 0)
+const percent = computed(() => {
+  if (!episodes.ready) return 0
+  return total.value ? Math.round(counter.value / total.value * 100) : 0
+})
+// La barra se muestra siempre para series; percent será 0% hasta que tengamos totales
 
 onMounted(async () => {
   if (props.show.type === 'serie' && !total.value) {
@@ -34,7 +36,7 @@ function open () {
 <template>
   <article class="card" @click="open">
     <img :src="props.show.img" :alt="props.show.title" />
-    <div v-if="showProgress" class="progress-wrap">
+    <div v-if="props.show.type === 'serie'" class="progress-wrap">
       <div class="progress-bar"><div class="fill" :style="{ width: percent + '%' }"></div></div>
       <small class="percent">{{ percent }}%</small>
     </div>
