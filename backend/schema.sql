@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS episodes_seen (
   season INTEGER NOT NULL,
   episode INTEGER NOT NULL,
   seen BOOLEAN NOT NULL DEFAULT 1,
+  total_episodes INTEGER,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (user_id, show_id, season, episode),
   FOREIGN KEY (user_id) REFERENCES users(id)

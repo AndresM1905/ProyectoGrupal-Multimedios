@@ -13,6 +13,56 @@ import jwt from 'jsonwebtoken'
 import { createClient } from '@libsql/client'
 import 'dotenv/config'
 
+// ======== TVDB helper for total episodes back-fill =========
+const { TVDB_API_KEY } = process.env
+const TVDB_API_BASE = 'https://api4.thetvdb.com/v4'
+let tvdbToken = null
+let tvdbTokenExpiry = 0
+
+async function getTvdbToken () {
+  if (!TVDB_API_KEY) throw new Error('TVDB_API_KEY env var missing')
+  const now = Date.now()
+  if (tvdbToken && now < tvdbTokenExpiry) return tvdbToken
+  const res = await fetch(`${TVDB_API_BASE}/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ apikey: TVDB_API_KEY })
+  })
+  if (!res.ok) throw new Error('TVDB auth failed')
+  const { data } = await res.json()
+  tvdbToken = data.token
+  tvdbTokenExpiry = now + 24 * 60 * 60 * 1000 // 24h
+  return tvdbToken
+}
+
+// Devuelve número total de episodios de una serie (suma de todas las seasons)
+async function fetchTotalEpisodes (seriesId) {
+  let page = 0
+  let hasMore = true
+  let scheme = 'default'
+  let total = 0
+  const token = await getTvdbToken()
+  while (hasMore) {
+    const url = `${TVDB_API_BASE}/series/${seriesId}/episodes/${scheme}?page=${page}`
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+    if (!res.ok) {
+      if (scheme === 'default') { // prueba con esquema official una vez
+        scheme = 'official'
+        page = 0
+        continue
+      }
+      throw new Error(`TVDB episodes error ${res.status}`)
+    }
+    const json = await res.json()
+    const list = Array.isArray(json.data) ? json.data : (Array.isArray(json.data?.episodes) ? json.data.episodes : [])
+    total += list.length
+    page = json.links?.next ?? null
+    if (page === null) hasMore = false
+  }
+  return total
+}
+
+
 const app = express()
 app.use(cors())
 app.use(express.json())
@@ -109,26 +159,69 @@ app.delete('/lists', auth, async (req, res) => {
 // ================= Episodios vistos ==================
 // Obtener episodios vistos (opcional show_id)
 app.get('/episodes', auth, async (req, res) => {
+  const t0 = Date.now()
+  console.log('[EPISODES] inicio')
+
   const { show_id } = req.query
-  const sql = show_id
-    ? 'SELECT * FROM episodes_seen WHERE user_id = ? AND show_id = ?'
-    : 'SELECT * FROM episodes_seen WHERE user_id = ?'
-  const { rows } = await db.execute({ sql, args: show_id ? [req.user.sub, show_id] : [req.user.sub] })
+  let sql
+  if (show_id) {
+    sql = 'SELECT * FROM episodes_seen WHERE user_id = ? AND show_id = ? AND seen = 1'
+  } else {
+    sql = `SELECT show_id,
+                 COALESCE(MAX(total_episodes), 0) AS total_episodes,
+                 COUNT(*)                      AS seen_count
+            FROM episodes_seen
+            WHERE user_id = ? AND seen = 1
+            GROUP BY show_id`
+  }
+  let rows
+  try {
+    const argsArr = show_id ? [req.user.sub, show_id] : [req.user.sub]
+    const result = await db.execute({ sql, args: argsArr })
+    rows = result.rows.map(obj => {
+      const out = {}
+      for (const [k, v] of Object.entries(obj)) {
+        out[k] = typeof v === 'bigint' ? Number(v) : v
+      }
+      return out
+    })
+    console.log('[EPISODES] consulta OK', rows.length, 'filas')
+  } catch (err) {
+    console.error('[EPISODES] error SQL', err)
+    return res.status(500).json({ error: 'db error' })
+  }
   res.json(rows)
 })
 
 // Upsert episodio
 app.post('/episodes', auth, async (req, res) => {
-  const { show_id, season, episode, seen = true } = req.body
+  const { show_id, season, episode, seen = true, total_episodes } = req.body
   if (show_id == null || season == null || episode == null) {
     return res.status(400).json({ error: 'Datos incompletos' })
   }
   await db.execute({
-    sql: `INSERT INTO episodes_seen (user_id, show_id, season, episode, seen) VALUES (?, ?, ?, ?, ?)
+    sql: `INSERT INTO episodes_seen (user_id, show_id, season, episode, seen, total_episodes) VALUES (?, ?, ?, ?, ?, ?)
           ON CONFLICT(user_id, show_id, season, episode)
-          DO UPDATE SET seen = excluded.seen, updated_at = CURRENT_TIMESTAMP`,
-    args: [req.user.sub, show_id, season, episode, seen ? 1 : 0]
+          DO UPDATE SET seen = excluded.seen,
+                       updated_at = CURRENT_TIMESTAMP,
+                       total_episodes = COALESCE(excluded.total_episodes, episodes_seen.total_episodes)`,
+    args: [req.user.sub, show_id, season, episode, seen ? 1 : 0, total_episodes]
   })
+
+  // Si aún no tenemos total_episodes guardado para esta serie, obténlo una vez y actualiza
+  const { rows: totalRows } = await db.execute({
+    sql: 'SELECT 1 FROM episodes_seen WHERE user_id = ? AND show_id = ? AND total_episodes IS NOT NULL LIMIT 1',
+    args: [req.user.sub, show_id]
+  })
+  if (totalRows.length === 0) {
+    const total = await fetchTotalEpisodes(show_id).catch(() => 0)
+    if (total > 0) {
+      await db.execute({
+        sql: 'UPDATE episodes_seen SET total_episodes = ? WHERE user_id = ? AND show_id = ?',
+        args: [total, req.user.sub, show_id]
+      })
+    }
+  }
   res.json({ ok: true })
 })
 
@@ -141,6 +234,31 @@ app.delete('/episodes/:showId', auth, async (req, res) => {
   })
   res.json({ ok: true })
 })
+
+// ===== Back-fill totals once at startup =====
+async function backfillMissingTotals () {
+  try {
+    const { rows } = await db.execute({
+      sql: 'SELECT DISTINCT user_id, show_id FROM episodes_seen WHERE total_episodes IS NULL AND seen = 1',
+      args: []
+    })
+    console.log('Back-fill pendientes:', rows.length)
+    for (const row of rows) {
+      const total = await fetchTotalEpisodes(row.show_id).catch(() => 0)
+      if (total > 0) {
+        await db.execute({
+          sql: 'UPDATE episodes_seen SET total_episodes = ? WHERE user_id = ? AND show_id = ? AND total_episodes IS NULL',
+          args: [total, row.user_id, row.show_id]
+        })
+        console.log(`Total ${total} episodios para serie ${row.show_id} (usuario ${row.user_id})`)
+      }
+    }
+    console.log('Back-fill completado')
+  } catch (err) {
+    console.error('Error back-fill startup', err)
+  }
+}
+backfillMissingTotals()
 
 // Iniciar servidor
 const PORT = process.env.PORT || 4000

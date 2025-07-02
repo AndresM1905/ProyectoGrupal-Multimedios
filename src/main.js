@@ -6,7 +6,7 @@ import './assets/styles.css'
 import App from './App.vue'
 import { useAuthStore } from './stores/auth'
 import { useEpisodesStore } from './stores/episodes'
-import { getEpisodes } from './api/tvdb'
+
 import { useListsStore } from './stores/lists'
 
 async function bootstrap () {
@@ -23,15 +23,20 @@ async function bootstrap () {
   const search = useSearchStore()
   search.close()
 
-  if (await auth.validate()) {
-    // cargar listas y progreso
-    await lists.loadFromApi()
-    await episodesStore.loadFromApi()
+  // No montamos todavía: primero cargamos datos clave (listas + episodios) para que Safari tenga porcentajes correctos
+  // app.mount('#app')
 
-    // Pre-cargar totales de episodios para series en listas para que las barras aparezcan sin abrir el modal
+  // precarga totales de episodios sin bloquear la UI
+  async function preloadTotals (listsStore, episodesStore) {
     const seriesIds = new Set()
+    // solo series que ya tienen al menos un episodio visto
+    Object.keys(episodesStore.seen).forEach(id => {
+      if (episodesStore.countSeen(id) > 0 && !episodesStore.getTotal(id)) {
+        seriesIds.add(id)
+      }
+    })
     ;['watchlist', 'watched', 'favorites'].forEach(name => {
-      lists[name].forEach(item => {
+      listsStore[name].forEach(item => {
         if ((item.type || 'serie') === 'serie' && !episodesStore.getTotal(item.id)) {
           seriesIds.add(item.id)
         }
@@ -39,19 +44,44 @@ async function bootstrap () {
     })
     for (const id of seriesIds) {
       try {
-        const seasons = await getEpisodes(id)
+        const numericId = Number(id)
+        const seasons = await getEpisodes(numericId)
         const totalEp = Object.values(seasons).reduce((s, list) => s + list.length, 0)
-        episodesStore.setTotal(id, totalEp)
+        if (totalEp) episodesStore.setTotal(numericId, totalEp)
       } catch (e) {
         console.error('preload total episodes', id, e)
       }
     }
-  } else if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
-    await router.replace('/login')
   }
 
-  await router.isReady()
-  app.mount('#app')
+  try {
+    const isAuth = await auth.validate()
+    if (isAuth) {
+      // cargar listas y progreso
+      await lists.loadFromApi()
+      await episodesStore.loadFromApi()
+      await preloadTotals(lists, episodesStore)
+      // Espera a que la reactividad calcule contadores antes del primer render
+      await import('vue').then(m => m.nextTick())
+      if (!app._container) app.mount('#app')
+
+    } else {
+      // token inválido o no hay sesión, redirige a login si no estás ya allí
+
+      if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+        await router.replace('/login')
+      }
+    }
+  } catch (e) {
+    console.error('Error bootstrap', e)
+    // ante fallo, fuerza a login
+    if (!app._container) app.mount('#app')
+    if (window.location.pathname !== '/login') {
+      await router.replace('/login')
+    }
+  }
+
+  // router se resolverá después, ya montado
 }
 
 bootstrap()

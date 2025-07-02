@@ -11,17 +11,18 @@ const props = defineProps({
 const modal = useModalStore()
 const episodes = useEpisodesStore()
 const total = computed(() => props.show.type === 'serie' ? episodes.getTotal(props.show.id) : 0)
-const percent = computed(() => total.value ? episodes.percentSeen(props.show.id) : 0)
+const seenCount = computed(() => episodes.countSeen(props.show.id))
+const percent = computed(() => total.value ? episodes.getPercent(props.show.id) : 0)
+// Mostrar barra solo si existe total Y se ha visto al menos un episodio
+const showProgress = computed(() => total.value > 0)
 
 onMounted(async () => {
   if (props.show.type === 'serie' && !total.value) {
     try {
       const seasons = await getEpisodes(props.show.id)
-      const totalEp = Object.values(seasons).reduce((sum, list) => sum + list.length, 0)
-      episodes.setTotal(props.show.id, totalEp)
-    } catch (e) {
-      console.error('Preload episodes', e)
-    }
+      const totalEp = Object.values(seasons).reduce((s, list) => s + list.length, 0)
+      if (totalEp) episodes.setTotal(props.show.id, totalEp)
+    } catch (e) { console.error('card preload', e) }
   }
 })
 
@@ -33,7 +34,7 @@ function open () {
 <template>
   <article class="card" @click="open">
     <img :src="props.show.img" :alt="props.show.title" />
-    <div v-if="percent" class="progress-wrap">
+    <div v-if="showProgress" class="progress-wrap">
       <div class="progress-bar"><div class="fill" :style="{ width: percent + '%' }"></div></div>
       <small class="percent">{{ percent }}%</small>
     </div>

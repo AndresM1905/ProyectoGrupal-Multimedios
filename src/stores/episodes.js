@@ -1,6 +1,7 @@
 
 import { defineStore } from 'pinia'
-import { ref, watch } from 'vue'
+import { getEpisodes } from '../api/tvdb'
+import { ref, watch, reactive } from 'vue'
 
 // Guarda los episodios vistos por serie
 // estructura: { [seriesId]: Set(episodeId) } // seen
@@ -9,23 +10,44 @@ import { api } from './auth'
 
 export const useEpisodesStore = defineStore('episodes', () => {
   const seen = ref({})
-  const totals = ref({})
+  const totals = reactive({})
+  const counters = reactive({})  // número de episodios vistos por serie (reactivo)
+
+  function key (id) { return String(id) }
 
   function isSeen (seriesId, episodeId) {
-    return !!seen.value[seriesId]?.has(episodeId)
+    const id = key(seriesId)
+    return !!seen.value[id]?.has(episodeId)
+  }
+
+  function updateCounter (seriesId) {
+    counters[key(seriesId)] = countSeen(seriesId)
   }
 
   async function toggleEpisode (seriesId, episodeId, season) {
-    if (!seen.value[seriesId]) seen.value[seriesId] = new Set()
-    const isCurrentlySeen = seen.value[seriesId].has(episodeId)
+    const idKey = key(seriesId)
+    if (!seen.value[idKey]) seen.value[idKey] = new Set()
+    const isCurrentlySeen = seen.value[idKey].has(episodeId)
     if (isCurrentlySeen) {
-      seen.value[seriesId].delete(episodeId)
+      seen.value[idKey].delete(episodeId)
     } else {
-      seen.value[seriesId].add(episodeId)
+      seen.value[idKey].add(episodeId)
+    }
+    // Actualizar contador para reactividad inmediata en la UI
+    updateCounter(seriesId)
+    // Si aún no tenemos total, obténlo SINCRÓNICAMENTE antes de persistir para que el backend reciba el total de inmediato
+    let totalForPost = getTotal(seriesId)
+    if (!totalForPost) {
+      try {
+        const seasons = await getEpisodes(Number(seriesId))
+        totalForPost = Object.values(seasons).reduce((s, list) => s + list.length, 0)
+        if (totalForPost) setTotal(seriesId, totalForPost)
+      } catch (e) { console.error('fetch total sync', e) }
     }
     // Persistir
     try {
       await api.post('/episodes', {
+        total_episodes: totalForPost || undefined,
         show_id: seriesId,
         season,
         episode: episodeId,
@@ -38,35 +60,83 @@ export const useEpisodesStore = defineStore('episodes', () => {
 
   async function loadFromApi (seriesId) {
     try {
-      const { data } = await api.get('/episodes', { params: seriesId ? { show_id: seriesId } : {} })
+      const idParam = seriesId ? key(seriesId) : undefined
+      const { data } = await api.get('/episodes', { params: idParam ? { show_id: idParam } : {} })
             // Reemplazar sets para reflejar exactamente lo que viene del backend
       if (seriesId) {
-        seen.value[seriesId] = new Set()
+        seen.value[key(seriesId)] = new Set()
       }
+      const temp = {}
       data.forEach(row => {
-        if (!seen.value[row.show_id]) seen.value[row.show_id] = new Set()
-        if (row.seen) seen.value[row.show_id].add(row.episode)
+        // Nuevo formato agregado (sin episode/seen)
+        if ('seen_count' in row) {
+          totals[key(row.show_id)] = row.total_episodes || 0
+          counters[key(row.show_id)] = row.seen_count || 0
+          // sin sets individuales; crea uno vacío para evitar undefined
+          if (!seen.value[key(row.show_id)]) seen.value[key(row.show_id)] = new Set()
+          return
+        }
+        // Formato antiguo (una fila por episodio)
+        if (row.total_episodes != null) {
+          totals[key(row.show_id)] = row.total_episodes
+        }
+        const rowId = key(row.show_id)
+        if (!temp[rowId]) temp[rowId] = []
+        if (row.seen) temp[rowId].push(row.episode)
       })
+      Object.keys(temp).forEach(id => {
+        seen.value[key(id)] = new Set(temp[id])
+        updateCounter(id)
+      })
+
+      // Back-fill: series con episodios vistos pero sin total guardado
+      const pending = Object.keys(seen.value).filter(id => countSeen(id) > 0 && !getTotal(id))
+      await Promise.all(pending.map(async id => {
+        try {
+          const seasons = await getEpisodes(Number(id))
+          const total = Object.values(seasons).reduce((s, list) => s + list.length, 0)
+          if (total) {
+            setTotal(id, total)
+            await api.post('/episodes', {
+              show_id: id,
+              season: 0,
+              episode: 0,
+              seen: true,
+              total_episodes: total
+            })
+          }
+        } catch (err) {
+          console.error('backfill total', id, err)
+        }
+      }))
     } catch (e) {
       console.error('load episodes', e)
     }
+    // Recalcula contadores tras posibles backfills
+    Object.keys(seen.value).forEach(id => updateCounter(id))
   }
 
   function countSeen (seriesId) {
-    return seen.value[seriesId] ? seen.value[seriesId].size : 0
+    return seen.value[key(seriesId)] ? seen.value[key(seriesId)].size : 0
   }
 
   function setTotal (seriesId, total) {
-    totals.value[seriesId] = total
+    totals[key(seriesId)] = total
   }
 
   function getTotal (seriesId) {
-    return totals.value[seriesId] || 0
+    return totals[key(seriesId)] || 0
   }
 
-  function percentSeen (seriesId) {
+  function getPercent (seriesId) {
     const total = getTotal(seriesId)
-    return total ? Math.round(countSeen(seriesId) / total * 100) : 0
+    const seenCnt = counters[key(seriesId)] || 0
+    return total ? Math.round(seenCnt / total * 100) : 0
+  }
+
+  // mantener compat antigua
+  function percentSeen (seriesId) {
+    return getPercent(seriesId)
   }
 
   // Persiste en localStorage
@@ -77,9 +147,9 @@ export const useEpisodesStore = defineStore('episodes', () => {
       const parsed = JSON.parse(raw)
       const savedSeen = parsed.seen || parsed // backward compat
       Object.keys(savedSeen).forEach(k => {
-        seen.value[k] = new Set(savedSeen[k])
+        seen.value[key(k)] = new Set(savedSeen[k])
       })
-      if (parsed.totals) totals.value = parsed.totals
+      if (parsed.totals) Object.assign(totals, parsed.totals)
     } catch (e) {
       console.error('Error loading episodes from LS', e)
     }
@@ -90,9 +160,9 @@ export const useEpisodesStore = defineStore('episodes', () => {
     Object.keys(seen.value).forEach(k => {
       serializable[k] = Array.from(seen.value[k])
     })
-    const totalsObj = { ...totals.value }
+    const totalsObj = { ...totals }
     localStorage.setItem(LS_KEY, JSON.stringify({ seen: serializable, totals: totalsObj }))
   }, { deep: true })
 
-  return { seen, totals, isSeen, toggleEpisode, loadFromApi, countSeen, setTotal, getTotal, percentSeen }
+  return { seen, totals, counters, isSeen, toggleEpisode, loadFromApi, countSeen, setTotal, getTotal, percentSeen, getPercent }
 })
