@@ -1,0 +1,31 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`HomeView snapshot > renderiza con ítems en las listas 1`] = `
+"<section class="section">
+  <h3 class="section-title"><i class="fa-solid fa-bookmark"></i> Mi Watchlist</h3>
+  <carousel-stub shows="[object Object]"></carousel-stub>
+</section>
+<section class="section">
+  <h3 class="section-title"><i class="fa-solid fa-eye"></i> Vistos</h3>
+  <p>Aún no marcaste contenido como visto.</p>
+</section>
+<section class="section">
+  <h3 class="section-title"><i class="fa-solid fa-heart"></i> Favoritos</h3>
+  <carousel-stub shows="[object Object]"></carousel-stub>
+</section>"
+`;
+
+exports[`HomeView snapshot > renderiza secciones vacías como esperado 1`] = `
+"<section class="section">
+  <h3 class="section-title"><i class="fa-solid fa-bookmark"></i> Mi Watchlist</h3>
+  <p>No tienes contenido en tu Watchlist.</p>
+</section>
+<section class="section">
+  <h3 class="section-title"><i class="fa-solid fa-eye"></i> Vistos</h3>
+  <p>Aún no marcaste contenido como visto.</p>
+</section>
+<section class="section">
+  <h3 class="section-title"><i class="fa-solid fa-heart"></i> Favoritos</h3>
+  <p>No tienes contenido favorito aún.</p>
+</section>"
+`;

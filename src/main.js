@@ -1,7 +1,6 @@
 import { createApp, nextTick } from 'vue'
 import { createPinia } from 'pinia'
 import router from './router'
-// import './style.css'  // eliminado para prevenir estilos base que interferían en mobile
 import './assets/styles.css'
 import App from './App.vue'
 import { useAuthStore } from './stores/auth'

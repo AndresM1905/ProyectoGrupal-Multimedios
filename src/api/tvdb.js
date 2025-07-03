@@ -1,6 +1,4 @@
-// Pequeño wrapper para la API v4 de TheTVDB
-// Guarda el JWT en sessionStorage para evitar pedirlo cada vez
-// Necesita la variable de entorno VITE_TVDB_API_KEY en el archivo .env
+
 
 const API_KEY = import.meta.env.VITE_TVDB_API_KEY
 const API_BASE = 'https://api4.thetvdb.com/v4'
