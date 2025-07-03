@@ -36,7 +36,7 @@ function open () {
 <template>
   <article class="card" @click="open">
     <img :src="props.show.img" :alt="props.show.title" />
-    <div v-if="props.show.type === 'serie'" class="progress-wrap">
+    <div v-if="props.show.type === 'serie' && counter > 0" class="progress-wrap">
       <div class="progress-bar"><div class="fill" :style="{ width: percent + '%' }"></div></div>
       <small class="percent">{{ percent }}%</small>
     </div>
